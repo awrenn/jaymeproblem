@@ -28,8 +28,13 @@ def main():
     prob = pulp.LpProblem("JaymesProblem")
 
     DAYS = range(5)
+    dm = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+
     PAS = range(5)
+    pas = ["Jayme", "NotJayme" * 4]
+
     SHIFTS = range(5)
+    shifts = ["Morning", "Night", "Full", "Half-Morn", "Half-ternoon"]
 
     SHIFT_COSTS = [12, 12, 8, 4, 4]
 
@@ -43,20 +48,33 @@ def main():
             pulp.lpSum([choices[day][p][2] for p in PAS]) == 1 - uses_halfshifts[day]
         )
 
-        prob += pulp.lpSum([choices[day][p][3] for p in PAS]) == uses_halfshifts[day]
-        prob += pulp.lpSum([choices[day][p][4] for p in PAS]) == uses_halfshifts[day]
+        prob += pulp.lpSum([choices[day][p][3] for p in PAS]) >= uses_halfshifts[day]
+        prob += pulp.lpSum([choices[day][p][4] for p in PAS]) >= uses_halfshifts[day]
 
-    # prob += pulp.lpSum([SHIFT_COSTS[s] * choices[d][0][s] for d in DAYS for s in SHIFTS]) == 16
-    # for pa in PAS[1:]:
-    #    prob += pulp.lpSum([SHIFT_COSTS[s] * choices[d][pa][s] for d in DAYS for s in SHIFTS]) == 40
+    prob += (
+        pulp.lpSum([SHIFT_COSTS[s] * choices[d][0][s] for d in DAYS for s in SHIFTS])
+        == 16
+    )
+    for pa in PAS[1:]:
+        prob += (
+            pulp.lpSum(
+                [SHIFT_COSTS[s] * choices[d][pa][s] for d in DAYS for s in SHIFTS]
+            )
+            == 40
+        )
 
-    print(prob.solve())
-    for day in DAYS:
-        for shift in SHIFTS:
-            for pa in PAS:
-                if choices[day][pa][shift] == 1:
-                    print(f"PA {pa} is working shift {shift} on day {day}")
-    print(choices)
+    print(prob)
+    solved = prob.solve()
+    print(solved)
+
+    hours = [24, 0, 0, 0, 0]
+    for pa in PAS:
+        for day in DAYS:
+            for shift in SHIFTS:
+                if pulp.value(choices[day][pa][shift]) == 1:
+                    hours[pa] += SHIFT_COSTS[shift]
+                    print(f"PA {pa} is working shift {shifts[shift]} on day {dm[day]}")
+    print(hours)
 
 
 if __name__ == "__main__":
